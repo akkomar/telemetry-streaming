@@ -1,7 +1,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-import sys.process._;
+import scala.sys.process._;
 
 val localMavenHttps = "https://s3-us-west-2.amazonaws.com/net-mozaws-data-us-west-2-ops-mavenrepo/"
 
@@ -25,7 +25,7 @@ lazy val root = (project in file(".")).
   settings(
     libraryDependencies += "com.mozilla.telemetry" %% "moztelemetry" % "1.0-SNAPSHOT",
     libraryDependencies += "com.mozilla.telemetry" %% "spark-hyperloglog" % "2.0.0-SNAPSHOT",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % Test,
     libraryDependencies += "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
     libraryDependencies += "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided",
     libraryDependencies += "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
@@ -33,7 +33,7 @@ lazy val root = (project in file(".")).
     libraryDependencies += "org.rogach" %% "scallop" % "1.0.2",
     libraryDependencies += "com.google.protobuf" % "protobuf-java" % "2.5.0",
     libraryDependencies += "joda-time" % "joda-time" % "2.9.2",
-    libraryDependencies += "org.apache.kafka" % "kafka_2.11" % "0.10.0.1",
+    libraryDependencies += "org.apache.kafka" %% "kafka" % "0.10.0.1" % Test,
     libraryDependencies += "org.scalaj" %% "scalaj-http" % "2.3.0",
     libraryDependencies += "com.github.tomakehurst" % "wiremock-standalone" % "2.14.0" % "provided",
     libraryDependencies += "com.github.java-json-tools" % "json-schema-validator" % "2.2.8"
@@ -77,5 +77,10 @@ assemblyMergeStrategy in assembly := {
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
 }
+// Shade PB files - required for running on Databricks
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
+  ShadeRule.rename("com.trueaccord.scalapb.**" -> "shadescalapb.@1").inAll
+)
 
 addCommandAlias("ci", ";clean ;compile ;scalastyle ;test:scalastyle ;coverage ;dockerComposeTest ;coverageReport")
