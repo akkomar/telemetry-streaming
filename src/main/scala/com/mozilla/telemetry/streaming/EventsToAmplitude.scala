@@ -202,7 +202,7 @@ object EventsToAmplitude {
 
   def sendStreamingEvents(spark: SparkSession, opts: Opts): Unit = {
     val config = readConfigFile(opts.configFilePath())
-    val apiKey = sys.env(AMPLITUDE_API_KEY_KEY)
+    val apiKey = sys.env.getOrElse(AMPLITUDE_API_KEY_KEY, "test-api-key")
     val httpSink = new HttpSink(opts.url(), Map("api_key" -> apiKey))
 
     val pings = spark
