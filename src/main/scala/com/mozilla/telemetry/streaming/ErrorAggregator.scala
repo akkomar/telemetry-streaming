@@ -205,7 +205,9 @@ object ErrorAggregator {
       .groupBy(dimensionsCols: _*)
       .agg(aggCols.head, aggCols.tail: _*)
       .drop("window")
-      .coalesce(1)
+      .coalesce(240)
+    //TODO: choose max number of partitions based on production workload
+    //or repartition to 1 if we really need one file
   }
 
   private def buildDimensions(dimensionsSchema: StructType, meta: Meta, application: Application): Array[Row] = {
