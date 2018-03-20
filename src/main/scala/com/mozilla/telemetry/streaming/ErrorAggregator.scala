@@ -79,6 +79,24 @@ object ErrorAggregator {
       required = false,
       default = Some(defaultNumFiles)
       )
+    val coalesceNumPartitions: ScallopOption[Int] = opt[Int](
+      "coalesceNumPartitions",
+      descr = "Number of partitions to coalesce aggregations to",
+      required = false,
+      default = None
+    )
+    val repartitionNumPartitions: ScallopOption[Int] = opt[Int](
+      "repartitionNumPartitions",
+      descr = "Number of partitions to repartition aggregations to",
+      required = false,
+      default = None
+    )
+    val shuffleNumPartitions: ScallopOption[Int] = opt[Int](
+      "shuffleNumPartitions",
+      descr = "Number of partitions to use on shuffling data for aggregations",
+      required = false,
+      default = Some(200)
+    )
 
     requireOne(kafkaBroker, from)
     conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
@@ -164,7 +182,7 @@ object ErrorAggregator {
   private val HllMerge = new HyperLogLogMerge
 
   private[streaming] def aggregate(pings: DataFrame, raiseOnError: Boolean = false, online: Boolean = true, dimensions: StructType,
-    metrics: StructType, countHistograms: StructType, thresholds: Map[String, (List[String], List[Int])]): DataFrame = {
+    metrics: StructType, countHistograms: StructType, thresholds: Map[String, (List[String], List[Int])], opts: Opts): DataFrame = {
     import pings.sparkSession.implicits._
 
     // A custom row encoder is needed to use Rows within a Spark Dataset
@@ -200,12 +218,15 @@ object ErrorAggregator {
     * The resulting DataFrame will contain the grouping columns + the columns aggregated.
     * Everything else gets dropped by .agg()
     * */
-    parsedPings
+    val aggregate = parsedPings
       .withColumn("client_hll", expr("HllCreate(client_id, 12)"))
       .groupBy(dimensionsCols: _*)
       .agg(aggCols.head, aggCols.tail: _*)
       .drop("window")
-      .coalesce(240)
+
+    val coalesced = opts.coalesceNumPartitions.get.map(partitions=>aggregate.coalesce(partitions)).getOrElse(aggregate)
+    val repartitioned = opts.repartitionNumPartitions.get.map(partitions=>coalesced.repartition(partitions)).getOrElse(coalesced)
+    repartitioned
     //TODO: choose max number of partitions based on production workload
     //or repartition to 1 if we really need one file
   }
@@ -335,7 +356,7 @@ object ErrorAggregator {
 
     val outputPath = opts.outputPath()
 
-    aggregate(pings.select("value"), raiseOnError = opts.raiseOnError(), online = true, dimensions, metrics, countHistograms, thresholds)
+    aggregate(pings.select("value"), raiseOnError = opts.raiseOnError(), online = true, dimensions, metrics, countHistograms, thresholds, opts)
       .writeStream
       .queryName(queryName)
       .format("parquet")
@@ -381,7 +402,7 @@ object ErrorAggregator {
       val pingsDataframe = spark.createDataFrame(pings, schema)
       val outputPath = opts.outputPath()
 
-      aggregate(pingsDataframe, raiseOnError = opts.raiseOnError(), online = false, dimensions, metrics, countHistograms, thresholds)
+      aggregate(pingsDataframe, raiseOnError = opts.raiseOnError(), online = false, dimensions, metrics, countHistograms, thresholds, opts)
         .repartition(opts.numParquetFiles())
         .write
         .mode("overwrite")
@@ -406,6 +427,7 @@ object ErrorAggregator {
     val spark = SparkSession.builder()
       .appName("Error Aggregates")
       .config("spark.streaming.stopGracefullyOnShutdown", "true")
+      .config("spark.sql.shuffle.partitions", opts.shuffleNumPartitions())
       .getOrCreate()
 
     spark.udf.register("HllCreate", hllCreate _)
