@@ -7,8 +7,9 @@ import java.io.File
 import java.sql.Timestamp
 
 import com.mozilla.spark.sql.hyperloglog.functions.{hllCardinality, hllCreate}
+import com.mozilla.telemetry.TestUtils
 import com.mozilla.telemetry.pings.CrashPing
-import com.mozilla.telemetry.streaming.TestUtils.todayDays
+import com.mozilla.telemetry.TestUtils.todayDays
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.streaming.StreamingQueryListener
@@ -21,7 +22,7 @@ class TestErrorAggregator extends FlatSpec with Matchers with BeforeAndAfterAll 
 
   implicit val formats = DefaultFormats
   val k = TestUtils.scalarValue
-  val app = TestUtils.application
+  val app = TestUtils.defaultApplication
 
   // 2016-04-07T02:01:56.000Z
   val earlierTimestamp = 1459994516000000000L

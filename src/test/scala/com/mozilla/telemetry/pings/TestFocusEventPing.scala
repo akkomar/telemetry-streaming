@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 package com.mozilla.telemetry.streaming
 
+import com.mozilla.telemetry.TestUtils
 import org.scalatest.{FlatSpec, Matchers}
 import com.mozilla.telemetry.pings._
 import com.mozilla.telemetry.streaming.EventsToAmplitude.Config

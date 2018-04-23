@@ -6,6 +6,7 @@ package com.mozilla.telemetry.streaming
 import java.sql.Timestamp
 
 import com.mozilla.spark.sql.hyperloglog.functions.{hllCardinality, hllCreate}
+import com.mozilla.telemetry.TestUtils
 import org.apache.spark.sql.SparkSession
 import org.json4s.DefaultFormats
 import org.scalatest.{FlatSpec, Matchers}
@@ -14,7 +15,7 @@ class TestExperimentsErrorAggregator extends FlatSpec with Matchers {
 
   implicit val formats = DefaultFormats
   val k = TestUtils.scalarValue
-  val app = TestUtils.application
+  val app = TestUtils.defaultApplication
 
   val spark = SparkSession.builder()
     .appName("Error Aggregates")

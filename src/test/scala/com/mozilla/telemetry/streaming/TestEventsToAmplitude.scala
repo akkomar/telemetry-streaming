@@ -11,6 +11,8 @@ import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{EqualToJsonPattern, MatchResult, ValueMatcher}
 import com.mozilla.telemetry.pings.FocusEventPing
 import java.net.URLDecoder
+
+import com.mozilla.telemetry.TestUtils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.streaming.StreamingQueryListener
 import org.json4s.jackson.JsonMethods._

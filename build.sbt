@@ -11,7 +11,7 @@ resolvers ++= Seq(
   "S3 local maven snapshots" at localMavenHttps + "snapshots"
 )
 
-name := "telemetry-streaming"
+name := "telemetry-streaming-gcp-poc"
 
 version := "0.1-SNAPSHOT"
 
@@ -20,15 +20,17 @@ organization := "com.mozilla"
 scalaVersion in ThisBuild := "2.11.8"
 
 val sparkVersion = "2.2.0"
+//val SparkScope = Compile
+val SparkScope = Provided
 
 lazy val root = (project in file(".")).
   settings(
     libraryDependencies += "com.mozilla.telemetry" %% "moztelemetry" % "1.0-SNAPSHOT",
     libraryDependencies += "com.mozilla.telemetry" %% "spark-hyperloglog" % "2.0.0-SNAPSHOT",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % Test,
-    libraryDependencies += "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-    libraryDependencies += "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided",
-    libraryDependencies += "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
+    libraryDependencies += "org.apache.spark" %% "spark-core" % sparkVersion % SparkScope,
+    libraryDependencies += "org.apache.spark" %% "spark-streaming" % sparkVersion % SparkScope,
+    libraryDependencies += "org.apache.spark" %% "spark-sql" % sparkVersion % SparkScope,
     libraryDependencies += "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion,
     libraryDependencies += "org.rogach" %% "scallop" % "1.0.2",
     libraryDependencies += "com.google.protobuf" % "protobuf-java" % "2.5.0",
