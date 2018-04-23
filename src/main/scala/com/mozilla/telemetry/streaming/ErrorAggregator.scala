@@ -7,14 +7,14 @@ import java.sql.{Date, Timestamp}
 
 import com.mozilla.spark.sql.hyperloglog.aggregates._
 import com.mozilla.spark.sql.hyperloglog.functions._
-import com.mozilla.telemetry.heka.{Dataset, Message}
+import com.mozilla.telemetry.heka.Message
 import com.mozilla.telemetry.pings._
 import com.mozilla.telemetry.timeseries._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.functions.{col, expr, sum, window}
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.joda.time.{DateTime, Days, format}
+import org.joda.time.{DateTime, format}
 import org.json4s._
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
@@ -79,9 +79,13 @@ object ErrorAggregator {
       required = false,
       default = Some(defaultNumFiles)
       )
+    val testPingsPath: ScallopOption[String] = opt[String](
+      "testPingsPath",
+      required = true,
+      default = Some("/tmp/akomar/test-pings"))
 
-    requireOne(kafkaBroker, from)
-    conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
+//    requireOne(kafkaBroker, from)
+//    conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
     verify()
   }
 
@@ -331,44 +335,46 @@ object ErrorAggregator {
   def writeBatchAggregates(spark: SparkSession, opts: Opts, dimensions: StructType, metrics: StructType,
     countHistograms: StructType, thresholds: Map[String, (List[String], List[Int])]): Unit = {
 
-    val from = dateFormatter.parseDateTime(opts.from())
-    val to = opts.to.get match {
-      case Some(t) => dateFormatter.parseDateTime(t)
-      case _ => DateTime.now.minusDays(1)
-    }
+//    val from = dateFormatter.parseDateTime(opts.from())
+//    val to = opts.to.get match {
+//      case Some(t) => dateFormatter.parseDateTime(t)
+//      case _ => DateTime.now.minusDays(1)
+//    }
 
     implicit val sc = spark.sparkContext
 
-    for (offset <- 0 to Days.daysBetween(from, to).getDays) {
-      val currentDate = from.plusDays(offset)
+//    for (offset <- 0 to Days.daysBetween(from, to).getDays) {
+//      val currentDate = from.plusDays(offset)
 
-      val pings = Dataset("telemetry")
-        .where("sourceName") {
-          case "telemetry" => true
-        }.where("sourceVersion") {
-          case "4" => true
-        }.where("docType") {
-          case docType if allowedDocTypes.contains(docType) => true
-        }.where("appName") {
-          case appName if allowedAppNames.contains(appName) => true
-        }.where("submissionDate") {
-          case date if date == currentDate.toString(dateFormat) => true
-        }.records(opts.fileLimit.get)
-        .map(m => Row(m.toByteArray))
+//      val pings = Dataset("telemetry")
+//        .where("sourceName") {
+//          case "telemetry" => true
+//        }.where("sourceVersion") {
+//          case "4" => true
+//        }.where("docType") {
+//          case docType if allowedDocTypes.contains(docType) => true
+//        }.where("appName") {
+//          case appName if allowedAppNames.contains(appName) => true
+//        }.where("submissionDate") {
+//          case date if date == currentDate.toString(dateFormat) => true
+//        }.records(opts.fileLimit.get)
+//        .map(m => Row(m.toByteArray))
 
       val schema = StructType(List(
           StructField("value", BinaryType, true)
       ))
 
-      val pingsDataframe = spark.createDataFrame(pings, schema)
+
+//      val pingsDataframe = spark.createDataFrame(pings, schema)
+      val pingsDataframe = spark.read.schema(schema).parquet(opts.testPingsPath()).toDF()
       val outputPath = opts.outputPath()
 
       aggregate(pingsDataframe, raiseOnError = opts.raiseOnError(), dimensions, metrics, countHistograms, thresholds)
         .repartition(opts.numParquetFiles())
         .write
         .mode("overwrite")
-        .parquet(s"${outputPath}/${outputPrefix}/submission_date_s3=${currentDate.toString(dateFormat)}")
-    }
+        .parquet(outputPath)
+//    }
 
     spark.stop()
   }
@@ -386,6 +392,7 @@ object ErrorAggregator {
     val opts = new Opts(args)
 
     val spark = SparkSession.builder()
+      .master("local[*]")
       .appName("Error Aggregates")
       .config("spark.streaming.stopGracefullyOnShutdown", "true")
       .getOrCreate()
@@ -399,4 +406,20 @@ object ErrorAggregator {
   }
 
   def main(args: Array[String]): Unit = run(args, defaultDimensionsSchema, defaultMetricsSchema, defaultCountHistogramErrorsSchema, defaultThresholdHistograms)
+}
+
+object OutputReader {
+  def main(args: Array[String]): Unit = {
+    val spark = SparkSession.builder()
+      .master("local[1]")
+      .appName("Error Aggregates")
+      .config("spark.streaming.stopGracefullyOnShutdown", "true")
+      .getOrCreate()
+
+    val aggregates = spark.read.parquet("/tmp/akomar/test-output").select("window_start", "version", "display_version", "count")
+    aggregates.show(false)
+    println(aggregates.count())
+
+    spark.close()
+  }
 }
