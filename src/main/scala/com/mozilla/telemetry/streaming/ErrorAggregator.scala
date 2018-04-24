@@ -83,8 +83,9 @@ object ErrorAggregator {
       "testPingsPath",
       required = true,
       default = Some("/tmp/akomar/test-pings"))
+    val master = opt[String](name = "master", default = Some("local[1]"))
 
-//    requireOne(kafkaBroker, from)
+    //    requireOne(kafkaBroker, from)
 //    conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
     verify()
   }
@@ -392,8 +393,8 @@ object ErrorAggregator {
     val opts = new Opts(args)
 
     val spark = SparkSession.builder()
-      .master("local[*]")
-      .appName("Error Aggregates")
+      .master(opts.master())
+      .appName("Error Aggregates - synthetic data test")
       .config("spark.streaming.stopGracefullyOnShutdown", "true")
       .getOrCreate()
 
@@ -412,7 +413,7 @@ object OutputReader {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
       .master("local[1]")
-      .appName("Error Aggregates")
+      .appName("Error Aggregates - synthetic data test reader")
       .config("spark.streaming.stopGracefullyOnShutdown", "true")
       .getOrCreate()
 
