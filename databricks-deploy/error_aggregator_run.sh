@@ -12,14 +12,14 @@ cat << EOF
 {
     "run_name": "Error aggregator - synthetic pings",
     "new_cluster": {
-        "spark_version": "4.0.x-scala2.11",
+        "spark_version": "3.5.x-scala2.11",
         "node_type_id": "i3.xlarge",
         "aws_attributes": {
             "availability": "SPOT_WITH_FALLBACK",
             "instance_profile_arn": "${IAM_ROLE}",
             "zone_id": "us-west-2b"
         },
-        "num_workers": 5,
+        "num_workers": 40,
         "ssh_public_keys": ["${SSH_PUBLIC_KEY}"]
     },
     "libraries": [{"jar": "dbfs:/${DBFS_JAR_DIR}/${JAR_NAME}"}],
@@ -32,23 +32,13 @@ cat << EOF
         "main_class_name": "com.mozilla.telemetry.streaming.ErrorAggregator",
         "parameters": [
             "--testPingsPath", "s3://net-mozaws-prod-us-west-2-pipeline-analysis/akomar/test-pings",
-            "--outputPath", "s3://net-mozaws-prod-us-west-2-pipeline-analysis/akomar/aggregator-output",
+            "--outputPath", "s3://net-mozaws-prod-us-west-2-pipeline-analysis/akomar/aggregator-output-40",
             "--numParquetFiles", 1
             ]
     }
 }
 EOF
 }
-
-echo "Building jar..."
-#sbt clean assembly
-
-echo "Deploying jar to Databricks cluster..."
-#databricks fs ls dbfs:/${DBFS_JAR_DIR} || databricks fs mkdirs dbfs:/${DBFS_JAR_DIR}
-#databricks fs ls dbfs:/${DBFS_JAR_DIR}/${JAR_NAME} && databricks fs rm dbfs:/${DBFS_JAR_DIR}/${JAR_NAME}
-#databricks fs cp target/scala-2.11/${JAR_NAME} dbfs:/${DBFS_JAR_DIR}/${JAR_NAME}
-
-echo $(create_job_json)
 
 curl -s \
     -H "Authorization: Bearer $DATABRICKS_TOKEN" \

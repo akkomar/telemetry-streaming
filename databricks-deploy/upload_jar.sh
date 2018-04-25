@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -eux pipefail
 
 DBFS_JAR_DIR=telemetry-streaming-lib-gcp-poc
 JAR_NAME=telemetry-streaming-gcp-poc-assembly-0.1-SNAPSHOT.jar

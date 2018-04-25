@@ -12,8 +12,8 @@ cat << EOF
 {
     "run_name": "Data generator",
     "new_cluster": {
-        "spark_version": "4.0.x-scala2.11",
-        "node_type_id": "c3.4xlarge",
+        "spark_version": "3.5.x-scala2.11",
+        "node_type_id": "i3.xlarge",
         "aws_attributes": {
             "availability": "SPOT_WITH_FALLBACK",
             "instance_profile_arn": "${IAM_ROLE}",
@@ -42,16 +42,6 @@ cat << EOF
 }
 EOF
 }
-
-echo "Building jar..."
-#sbt clean assembly
-
-echo "Deploying jar to Databricks cluster..."
-databricks fs ls dbfs:/${DBFS_JAR_DIR} || databricks fs mkdirs dbfs:/${DBFS_JAR_DIR}
-databricks fs ls dbfs:/${DBFS_JAR_DIR}/${JAR_NAME} && databricks fs rm dbfs:/${DBFS_JAR_DIR}/${JAR_NAME}
-databricks fs cp target/scala-2.11/${JAR_NAME} dbfs:/${DBFS_JAR_DIR}/${JAR_NAME}
-
-echo $(create_job_json)
 
 curl -s \
     -H "Authorization: Bearer $DATABRICKS_TOKEN" \
