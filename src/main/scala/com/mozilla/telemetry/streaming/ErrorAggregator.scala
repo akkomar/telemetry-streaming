@@ -9,7 +9,7 @@ import com.mozilla.telemetry.heka.{Dataset, Message}
 import com.mozilla.telemetry.pings._
 import com.mozilla.telemetry.timeseries._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.functions.{col, expr, sum, window}
+import org.apache.spark.sql.functions.{col, sum, window}
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.joda.time.{DateTime, Days, LocalDateTime, format}
@@ -247,18 +247,19 @@ object ErrorAggregator {
   def parsePing(dimensions: StructType, statsSchema: StructType, countHistograms: StructType)(message: Message): Array[Row] = {
     implicit val formats = DefaultFormats
 
-    val fields = message.fieldsAsMap
-    val docType = fields.getOrElse("docType", "").asInstanceOf[String]
+    val fields = message.toJValue.get
+
+    val docType = (fields \ "docType").extractOrElse("")
     if (!allowedDocTypes.contains(docType)) {
       throw new Exception("Doctype should be one of " + allowedDocTypes.mkString(sep = ","))
     }
 
-    val appName = fields.getOrElse("appName", "").asInstanceOf[String]
+    val appName = (fields \ "appName").extractOrElse("")
     if (!allowedAppNames.contains(appName)) {
       throw new Exception("AppName should be one of " + allowedAppNames.mkString(sep = ","))
     }
 
-    val channel = fields.getOrElse("normalizedChannel", "").asInstanceOf[String]
+    val channel = (fields \ "normalizedChannel").extractOrElse("")
     if (disallowedChannels.contains(channel)) {
       throw new Exception("Channel can't be one of " + disallowedChannels.mkString(sep = ","))
     }
