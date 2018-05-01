@@ -27,6 +27,7 @@ trait Ping {
 
   protected def getRawBuildId: Option[String]
 
+  // TODO: check if we can use appBuildId for all pings
   def getNormalizedBuildId: Option[String] = {
     getRawBuildId match {
       case Some(buildId: String) =>
