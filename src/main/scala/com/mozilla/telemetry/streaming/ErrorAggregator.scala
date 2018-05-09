@@ -80,6 +80,12 @@ object ErrorAggregator {
       required = false,
       default = Some(defaultNumFiles)
       )
+    val minPartitions: ScallopOption[Int] = opt[Int](
+      "minPartitions",
+      descr = "minPartitions",
+      required = false,
+      default = None
+    )
 
     requireOne(kafkaBroker, from)
     conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
@@ -356,7 +362,7 @@ object ErrorAggregator {
           case appName if allowedAppNames.contains(appName) => true
         }.where("submissionDate") {
           case date if date == currentDate.toString(dateFormat) => true
-        }.records(opts.fileLimit.get)
+        }.records(opts.fileLimit.get, opts.minPartitions.get)
         .map(m => Row(m.toByteArray))
 
       val schema = StructType(List(
