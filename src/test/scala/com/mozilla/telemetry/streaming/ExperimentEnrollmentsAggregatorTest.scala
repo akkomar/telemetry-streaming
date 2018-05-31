@@ -7,8 +7,8 @@ import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.scalatest.{FlatSpec, GivenWhenThen, Matchers}
 
 class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with GivenWhenThen with DataFrameSuiteBase {
@@ -28,7 +28,7 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
     super.assertDataFrameEquals(prepare(expected), prepare(result))
   }
 
-  def prepareExpectedAggregate(spark: SparkSession, rows: (String, String, Long, Long)*): DataFrame = {
+  def prepareExpectedAggregate(rows: (String, String, Long, Long)*): DataFrame = {
     import spark.implicits._
     spark.sparkContext.parallelize(List[(Timestamp, Timestamp, String, String, Long, Long)](
       rows.map(r => (ExpectedWindowStart, ExpectedWindowEnd, r._1, r._2, r._3, r._4)): _*
@@ -62,7 +62,7 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
     aggregates.schema.fields should contain theSameElementsAs expectedSchema.fields
 
     And("events are aggregated by experiment name and branch")
-    val expected = prepareExpectedAggregate(spark, (ExperimentA, "six", k, k), (ExperimentB, "one", k, 0))
+    val expected = prepareExpectedAggregate((ExperimentA, "six", k, k), (ExperimentB, "one", k, 0))
     assertDataFrameEquals(aggregates, expected)
   }
 
@@ -81,7 +81,7 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
     val aggregates = ExperimentEnrollmentsAggregator.aggregate(pingsDf)
 
     Then("events are aggregated, there is an aggregate with empty branch")
-    val expected = prepareExpectedAggregate(spark, (ExperimentA, "six", k, k / 2), (ExperimentA, null, 0, k / 2))
+    val expected = prepareExpectedAggregate((ExperimentA, "six", k, k / 2), (ExperimentA, null, 0, k / 2))
     assertDataFrameEquals(aggregates, expected)
   }
 
@@ -101,7 +101,7 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
     val aggregates = ExperimentEnrollmentsAggregator.aggregate(pingsDf)
 
     Then("resulting aggregate contains data from events with events")
-    val expected = prepareExpectedAggregate(spark, (ExperimentA, "six", k, 0))
+    val expected = prepareExpectedAggregate((ExperimentA, "six", k, 0))
     assertDataFrameEquals(aggregates, expected)
   }
 
