@@ -118,11 +118,11 @@ object ExperimentEnrollmentsAggregator {
       } else {
         try {
           val mainPing = MainPing(m)
-          mainPing.getNormandyEvents.filter(_.`object` == "preference_study").map { e =>
+          mainPing.getNormandyEvents.map { e =>
             // since events come preaggregated in main pings, it seems safer to use pings's timestamp here in order not to lose data
             val timestamp = mainPing.meta.normalizedTimestamp()
             val submissionDate = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(dateFormatter)
-            ExperimentEnrollmentEvent(e.method, e.value, e.extra.flatMap(m => m.get("branch")), timestamp, submissionDate)
+            ExperimentEnrollmentEvent(e.method, e.value, e.extra.flatMap(m => m.get("branch")), e.`object`, timestamp, submissionDate)
           }
         } catch {
           // TODO: track parse errors
@@ -135,7 +135,7 @@ object ExperimentEnrollmentsAggregator {
       .withWatermark("timestamp", "1 minute")
       .groupBy(
         window($"timestamp", "5 minute").as("window"),
-        $"experiment_id", $"branch_id", $"submission_date_s3")
+        $"object", $"experiment_id", $"branch_id", $"submission_date_s3")
       .agg(
         count(when($"method" === "enroll", 1)).alias("enroll_count"),
         count(when($"method" === "unenroll", 1)).alias("unenroll_count"))
@@ -151,6 +151,7 @@ object ExperimentEnrollmentsAggregator {
   case class ExperimentEnrollmentEvent(method: String, // enroll/unenroll
                                        experiment_id: Option[String],
                                        branch_id: Option[String],
+                                       `object`: String,
                                        timestamp: Timestamp,
                                        submission_date_s3: String)
 
@@ -200,4 +201,5 @@ object ExperimentEnrollmentsAggregator {
     conflicts(kafkaBroker, List(from, to, numParquetFiles))
     verify()
   }
+
 }

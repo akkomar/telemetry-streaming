@@ -13,8 +13,8 @@ import org.scalatest.{FlatSpec, GivenWhenThen, Matchers}
 
 class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with GivenWhenThen with DataFrameSuiteBase {
 
-  val k = 10
-  val checkedColumns = Array("window_start", "window_end", "experiment_id", "branch_id", "enroll_count", "unenroll_count")
+  val k = 10 //
+  val checkedColumns = Array("window_start", "window_end", "object", "experiment_id", "branch_id", "enroll_count", "unenroll_count")
   val ExpectedWindowStart = new Timestamp(LocalDateTime.parse("2016-04-07T13:35:00").toInstant(ZoneOffset.UTC).toEpochMilli)
   val ExpectedWindowEnd = new Timestamp(LocalDateTime.parse("2016-04-07T13:40:00").toInstant(ZoneOffset.UTC).toEpochMilli)
   private val ExperimentA = "pref-flip-timer-speed-up-60-1443940"
@@ -30,8 +30,8 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
 
   def prepareExpectedAggregate(rows: (String, String, Long, Long)*): DataFrame = {
     import spark.implicits._
-    spark.sparkContext.parallelize(List[(Timestamp, Timestamp, String, String, Long, Long)](
-      rows.map(r => (ExpectedWindowStart, ExpectedWindowEnd, r._1, r._2, r._3, r._4)): _*
+    spark.sparkContext.parallelize(List[(Timestamp, Timestamp, String, String, String, Long, Long)](
+      rows.map(r => (ExpectedWindowStart, ExpectedWindowEnd, "preference_study", r._1, r._2, r._3, r._4)): _*
     )).toDF(checkedColumns: _*)
   }
 
@@ -55,6 +55,7 @@ class ExperimentEnrollmentsAggregatorTest extends FlatSpec with Matchers with Gi
       StructField("window_end", TimestampType, nullable = true),
       StructField("experiment_id", StringType, nullable = true),
       StructField("branch_id", StringType, nullable = true),
+      StructField("object", StringType, nullable = true),
       StructField("enroll_count", LongType, nullable = false),
       StructField("unenroll_count", LongType, nullable = false),
       StructField("submission_date_s3", StringType, nullable = true)
