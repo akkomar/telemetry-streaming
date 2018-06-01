@@ -3,15 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 package com.mozilla.telemetry.streaming
 
-import java.net.URLEncoder
-
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import com.mozilla.telemetry.heka.Message
 import com.mozilla.telemetry.pings._
 import com.mozilla.telemetry.streaming.sinks.HttpSink
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import org.joda.time.{DateTime, Days, format}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.rogach.scallop.{ScallopConf, ScallopOption}
@@ -38,7 +35,7 @@ import scala.io.Source
  * Sampling is limited to the hundredths place; anything
  * more will be truncated (e.g. .355 will be .35, so 35%).
  */
-object EventsToAmplitude {
+object EventsToAmplitude extends StreamingJobBase {
 
   val AMPLITUDE_API_KEY_KEY = "AMPLITUDE_API_KEY"
   val TOP_LEVEL_PING_FIELDS =
@@ -60,7 +57,7 @@ object EventsToAmplitude {
   val allowedAppNames = List("Focus")
   val kafkaCacheMaxCapacity = 1000
   val kafkaTopic = "telemetry"
-  val queryName = "EventsToAmplitude"
+  override val queryName = "EventsToAmplitude"
   val writeMode = "error"
 
   private[streaming] class Opts(args: Array[String]) extends ScallopConf(args) {
@@ -217,21 +214,13 @@ object EventsToAmplitude {
 
   def sendBatchEvents(spark: SparkSession, opts: Opts): Unit = {
     val config = readConfigFile(opts.configFilePath())
-    val fmt = format.DateTimeFormat.forPattern("yyyyMMdd")
-
-    val from = fmt.parseDateTime(opts.from())
-    val to = opts.to.get match {
-      case Some(t) => fmt.parseDateTime(t)
-      case _ => DateTime.now.minusDays(1)
-    }
 
     val filters = config.getBatchFilters
     val maxParallelRequests = opts.maxParallelRequests()
 
     implicit val sc = spark.sparkContext
 
-    for (offset <- 0 to Days.daysBetween(from, to).getDays) {
-      val currentDate = from.plusDays(offset).toString("yyyyMMdd")
+    datesBetween(opts.from(), opts.to.get).foreach { currentDate =>
       val dataset = com.mozilla.telemetry.heka.Dataset("telemetry")
 
       val pings = config.getBatchFilters.filter{
