@@ -4,9 +4,7 @@
 package com.mozilla.telemetry.streaming
 
 import java.sql.Timestamp
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.{Instant, ZoneId}
 
 import com.mozilla.telemetry.heka.{Message, Dataset => MozDataset}
 import com.mozilla.telemetry.pings.MainPing
@@ -15,12 +13,12 @@ import org.apache.spark
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
-object ExperimentEnrollmentsAggregator {
-  val queryName = "experiment_enrollments"
-  val outputPrefix = "experiment_enrollments/v1"
+object ExperimentEnrollmentsAggregator extends StreamingJobBase {
+  override val queryName = "experiment_enrollments"
+  override val outputPrefix = "experiment_enrollments/v1"
+
   val kafkaCacheMaxCapacity = 100
-  val dateFormat = "yyyyMMdd"
-  val dateFormatter = DateTimeFormatter.ofPattern(dateFormat)
+
   private val allowedDocTypes = List("main")
   private val allowedAppNames = List("Firefox")
 
@@ -68,22 +66,15 @@ object ExperimentEnrollmentsAggregator {
   }
 
   def writeBatchAggregates(spark: SparkSession, opts: Opts): Unit = {
-    val from = LocalDate.parse(opts.from(), dateFormatter)
-    val to = opts.to.get match {
-      case Some(t) => LocalDate.parse(t, dateFormatter)
-      case _ => LocalDate.now.minusDays(1)
-    }
-
     implicit val sc = spark.sparkContext
     import spark.implicits._
-    for (offset <- 0L to ChronoUnit.DAYS.between(from, to)) {
-      val currentDate = from.plusDays(offset)
 
+    datesBetween(opts.from(), opts.to.get).foreach { currentDate =>
       val pings = MozDataset("telemetry")
         .where("sourceName") { case "telemetry" => true }
         .where("docType") { case docType if allowedDocTypes.contains(docType) => true }
         .where("appName") { case appName if allowedAppNames.contains(appName) => true }
-        .where("submissionDate") { case date if date == currentDate.format(dateFormatter) => true }
+        .where("submissionDate") { case date if date == currentDate => true }
         .records(opts.fileLimit.get)
         .map(_.toByteArray)
 
@@ -120,7 +111,7 @@ object ExperimentEnrollmentsAggregator {
           val mainPing = MainPing(m)
           mainPing.getNormandyEvents.map { e =>
             val timestamp = mainPing.meta.normalizedTimestamp()
-            val submissionDate = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(dateFormatter)
+            val submissionDate = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(DateFormatter)
             ExperimentEnrollmentEvent(e.method, e.value, e.extra.flatMap(m => m.get("branch")), e.`object`, timestamp, submissionDate)
           }
         } catch {
