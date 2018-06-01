@@ -8,7 +8,9 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.time.{Clock, Instant, LocalDate, ZoneId}
 
-abstract class StreamingJobBase {
+import com.mozilla.telemetry.streaming.StreamingJobBase._
+
+abstract class StreamingJobBase extends Serializable {
   val queryName: String
 
   /**
@@ -16,11 +18,6 @@ abstract class StreamingJobBase {
     */
   val outputPrefix: String = ""
 
-  /**
-    * Date format for parsing input arguments and formatting partitioning columns
-    */
-  val DateFormat = "yyyyMMdd"
-  val DateFormatter = DateTimeFormatter.ofPattern(DateFormat)
   val clock: Clock = Clock.systemUTC()
 
   /**
@@ -48,4 +45,12 @@ abstract class StreamingJobBase {
   def timestampToDateString(ts: Timestamp): String = {
     Instant.ofEpochMilli(ts.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(DateFormatter)
   }
+}
+
+object StreamingJobBase {
+  /**
+    * Date format for parsing input arguments and formatting partitioning columns
+    */
+  val DateFormat = "yyyyMMdd"
+  val DateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(DateFormat)
 }
