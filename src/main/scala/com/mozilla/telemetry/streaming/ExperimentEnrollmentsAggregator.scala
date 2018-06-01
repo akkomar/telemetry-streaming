@@ -119,7 +119,6 @@ object ExperimentEnrollmentsAggregator {
         try {
           val mainPing = MainPing(m)
           mainPing.getNormandyEvents.map { e =>
-            // since events come preaggregated in main pings, it seems safer to use pings's timestamp here in order not to lose data
             val timestamp = mainPing.meta.normalizedTimestamp()
             val submissionDate = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(dateFormatter)
             ExperimentEnrollmentEvent(e.method, e.value, e.extra.flatMap(m => m.get("branch")), e.`object`, timestamp, submissionDate)
