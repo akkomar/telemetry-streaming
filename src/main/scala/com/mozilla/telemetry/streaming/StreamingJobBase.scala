@@ -1,8 +1,9 @@
 package com.mozilla.telemetry.streaming
 
+import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, LocalDate}
+import java.time.{Clock, Instant, LocalDate, ZoneId}
 
 abstract class StreamingJobBase {
   val queryName: String
@@ -36,5 +37,12 @@ abstract class StreamingJobBase {
     (0L to ChronoUnit.DAYS.between(parsedFrom, parsedTo)).map { offset =>
       parsedFrom.plusDays(offset).format(DateFormatter)
     }
+  }
+
+  /**
+    * Converts timestamp to 'yyyMMdd'-formatted date string
+    */
+  def timestampToDateString(ts: Timestamp): String = {
+    Instant.ofEpochMilli(ts.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(DateFormatter)
   }
 }

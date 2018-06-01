@@ -1,5 +1,6 @@
 package com.mozilla.telemetry.streaming
 
+import java.sql.Timestamp
 import java.time.{Clock, LocalDate, ZoneId}
 
 import org.scalatest.{FlatSpec, Matchers}
@@ -16,5 +17,9 @@ class StreamingJobBaseTest extends FlatSpec with Matchers {
     base.datesBetween("20180401", Some("20180401")) should contain theSameElementsInOrderAs Seq("20180401")
     base.datesBetween("20180401", Some("20180403")) should contain theSameElementsInOrderAs Seq("20180401", "20180402", "20180403")
     base.datesBetween("20180403", None) should contain theSameElementsInOrderAs Seq("20180403", "20180404")
+  }
+
+  it should "properly convert timestamp to date string" in {
+    base.timestampToDateString(Timestamp.valueOf("2018-04-01 10:00:00")) shouldBe "20180401"
   }
 }

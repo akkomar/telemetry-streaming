@@ -12,19 +12,15 @@ import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.functions.{col, sum, window}
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.joda.time.{DateTime, Days, LocalDateTime, format}
 import org.json4s._
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
-object ErrorAggregator {
-  private val dateFormat = "yyyyMMdd"
-  private val dateFormatter = format.DateTimeFormat.forPattern(dateFormat)
+object ErrorAggregator extends StreamingJobBase {
+  override val queryName = "error_aggregator"
+  override val outputPrefix = "error_aggregator/v2"
 
-  private val defaultQueryName = "error_aggregator"
-  private val defaultOutputPrefix = "error_aggregator/v2"
-
-  var queryName = defaultQueryName
-  var outputPrefix = defaultOutputPrefix
+  var queryNameInternal = queryName
+  var outputPrefixInternal = outputPrefix
 
   val kafkaTopic = "telemetry"
   val defaultNumFiles = 60
@@ -171,7 +167,7 @@ object ErrorAggregator {
     experiments.map { case (experiment_id, experiment_branch) =>
       val dimensions = new RowBuilder(dimensionsSchema)
       dimensions("timestamp") = Some(meta.normalizedTimestamp())
-      dimensions("submission_date_s3") = Some(LocalDateTime.fromDateFields(meta.normalizedTimestamp()).toString(dateFormat))
+      dimensions("submission_date_s3") = Some(timestampToDateString(meta.normalizedTimestamp))
       dimensions("channel") = Some(meta.normalizedChannel)
       dimensions("version") = ping.getVersion
       dimensions("display_version") = ping.getDisplayVersion
@@ -304,9 +300,9 @@ object ErrorAggregator {
     aggregate(pings.select("value"), raiseOnError = opts.raiseOnError(), dimensions, metrics, countHistograms)
       .repartition(1)
       .writeStream
-      .queryName(queryName)
+      .queryName(queryNameInternal)
       .format("parquet")
-      .option("path", s"${outputPath}/${outputPrefix}")
+      .option("path", s"${outputPath}/${outputPrefixInternal}")
       .option("checkpointLocation", opts.checkpointPath())
       .partitionBy("submission_date_s3")
       .start()
@@ -314,18 +310,8 @@ object ErrorAggregator {
   }
 
   def writeBatchAggregates(spark: SparkSession, opts: Opts, dimensions: StructType, metrics: StructType, countHistograms: StructType): Unit = {
-
-    val from = dateFormatter.parseDateTime(opts.from())
-    val to = opts.to.get match {
-      case Some(t) => dateFormatter.parseDateTime(t)
-      case _ => DateTime.now.minusDays(1)
-    }
-
     implicit val sc = spark.sparkContext
-
-    for (offset <- 0 to Days.daysBetween(from, to).getDays) {
-      val currentDate = from.plusDays(offset)
-
+    datesBetween(opts.from(), opts.to.get).foreach { currentDate =>
       val pings = Dataset("telemetry")
         .where("sourceName") {
           case "telemetry" => true
@@ -334,7 +320,7 @@ object ErrorAggregator {
         }.where("appName") {
           case appName if allowedAppNames.contains(appName) => true
         }.where("submissionDate") {
-          case date if date == currentDate.toString(dateFormat) => true
+          case date if date == currentDate => true
         }.records(opts.fileLimit.get)
         .map(m => Row(m.toByteArray))
 
@@ -357,11 +343,11 @@ object ErrorAggregator {
   }
 
   def setPrefix(prefix: String): Unit = {
-    ErrorAggregator.outputPrefix = prefix
+    ErrorAggregator.outputPrefixInternal = prefix
   }
 
   def setQueryName(name: String): Unit = {
-    ErrorAggregator.queryName = name
+    ErrorAggregator.queryNameInternal = name
   }
 
   def run(args: Array[String], dimensions: StructType, metrics: StructType, countHistograms: StructType): Unit = {

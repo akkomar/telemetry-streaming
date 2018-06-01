@@ -4,7 +4,6 @@
 package com.mozilla.telemetry.streaming
 
 import java.sql.Timestamp
-import java.time.{Instant, ZoneId}
 
 import com.mozilla.telemetry.heka.{Message, Dataset => MozDataset}
 import com.mozilla.telemetry.pings.MainPing
@@ -111,7 +110,7 @@ object ExperimentEnrollmentsAggregator extends StreamingJobBase {
           val mainPing = MainPing(m)
           mainPing.getNormandyEvents.map { e =>
             val timestamp = mainPing.meta.normalizedTimestamp()
-            val submissionDate = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(DateFormatter)
+            val submissionDate = timestampToDateString(mainPing.meta.normalizedTimestamp())
             ExperimentEnrollmentEvent(e.method, e.value, e.extra.flatMap(m => m.get("branch")), e.`object`, timestamp, submissionDate)
           }
         } catch {
