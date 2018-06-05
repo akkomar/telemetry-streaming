@@ -96,6 +96,6 @@ assemblyShadeRules in assembly := Seq(
 
 addCommandAlias("ci", ";clean ;compile ;scalastyle ;test:scalastyle ;coverage ;dockerComposeTest ;coverageReport")
 
-val scalaStyleConfigUrl = Some(url("https://raw.githubusercontent.com/mozilla/moztelemetry/master/scalastyle-config.xml"))
+val scalaStyleConfigUrl = Some(url("https://raw.githubusercontent.com/mozilla/moztelemetry/scalastyle_2/scalastyle-config.xml"))
 (scalastyleConfigUrl in Compile) := scalaStyleConfigUrl
 (scalastyleConfigUrl in Test) := scalaStyleConfigUrl
