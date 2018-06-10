@@ -49,6 +49,22 @@ abstract class StreamingJobBase extends Serializable {
   def timestampToDateString(ts: Timestamp): String = {
     Instant.ofEpochMilli(ts.getTime).atZone(ZoneId.of("UTC")).toLocalDate.format(DateFormatter)
   }
+}
+
+object StreamingJobBase {
+
+  val TelemetryKafkaTopic = "telemetry"
+
+  /**
+    * Date format for parsing input arguments and formatting partitioning columns
+    */
+  val DateFormat = "yyyyMMdd"
+  val DateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(DateFormat)
+
+  /**
+    * Default number of output files written per partition
+    */
+  val DefaultNumFiles = 60
 
   private[streaming] class BaseOpts(args: Array[String]) extends ScallopConf(args) {
     val kafkaBroker: ScallopOption[String] = opt[String](
@@ -80,12 +96,4 @@ abstract class StreamingJobBase extends Serializable {
 
     requireOne(kafkaBroker, from)
   }
-}
-
-object StreamingJobBase {
-  /**
-    * Date format for parsing input arguments and formatting partitioning columns
-    */
-  val DateFormat = "yyyyMMdd"
-  val DateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(DateFormat)
 }

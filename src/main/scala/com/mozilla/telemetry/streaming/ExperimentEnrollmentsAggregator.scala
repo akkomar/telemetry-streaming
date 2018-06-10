@@ -7,7 +7,7 @@ import java.sql.Timestamp
 
 import com.mozilla.telemetry.heka.{Message, Dataset => MozDataset}
 import com.mozilla.telemetry.pings.MainPing
-import com.mozilla.telemetry.streaming.ErrorAggregator._
+import com.mozilla.telemetry.streaming.StreamingJobBase.{BaseOpts, DefaultNumFiles, TelemetryKafkaTopic}
 import org.apache.spark
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.rogach.scallop.ScallopOption
@@ -46,7 +46,7 @@ object ExperimentEnrollmentsAggregator extends StreamingJobBase {
       .option("failOnDataLoss", opts.failOnDataLoss())
       .option("kafka.max.partition.fetch.bytes", 8 * 1024 * 1024) // 8MB
       .option("spark.streaming.kafka.consumer.cache.maxCapacity", kafkaCacheMaxCapacity)
-      .option("subscribe", kafkaTopic)
+      .option("subscribe", TelemetryKafkaTopic)
       .option("startingOffsets", opts.startingOffsets())
       .load()
 
@@ -62,36 +62,6 @@ object ExperimentEnrollmentsAggregator extends StreamingJobBase {
       .partitionBy("submission_date_s3")
       .start()
       .awaitTermination()
-  }
-
-  def writeBatchAggregates(spark: SparkSession, opts: Opts): Unit = {
-    implicit val sc = spark.sparkContext
-    import spark.implicits._
-
-    datesBetween(opts.from(), opts.to.get).foreach { currentDate =>
-      val pings = MozDataset("telemetry")
-        .where("sourceName") { case "telemetry" => true }
-        .where("docType") { case docType if allowedDocTypes.contains(docType) => true }
-        .where("appName") { case appName if allowedAppNames.contains(appName) => true }
-        .where("submissionDate") { case date if date == currentDate => true }
-        .records(opts.fileLimit.get)
-        .map(_.toByteArray)
-
-      val pingsDataframe = pings.toDF("value")
-
-      val outputPath = opts.outputPath()
-
-      aggregate(pingsDataframe)
-        .repartition(opts.numParquetFiles())
-        .write
-        .mode("overwrite")
-        .partitionBy("submission_date_s3")
-        .parquet(s"${outputPath}/${outputPrefix}")
-    }
-
-    if (shouldStopContextAtEnd(spark)) {
-      spark.stop()
-    }
   }
 
   private[streaming] def aggregate(messages: DataFrame): DataFrame = {
@@ -133,6 +103,36 @@ object ExperimentEnrollmentsAggregator extends StreamingJobBase {
       .drop($"window")
   }
 
+  def writeBatchAggregates(spark: SparkSession, opts: Opts): Unit = {
+    implicit val sc = spark.sparkContext
+    import spark.implicits._
+
+    datesBetween(opts.from(), opts.to.get).foreach { currentDate =>
+      val pings = MozDataset("telemetry")
+        .where("sourceName") { case "telemetry" => true }
+        .where("docType") { case docType if allowedDocTypes.contains(docType) => true }
+        .where("appName") { case appName if allowedAppNames.contains(appName) => true }
+        .where("submissionDate") { case date if date == currentDate => true }
+        .records(opts.fileLimit.get)
+        .map(_.toByteArray)
+
+      val pingsDataframe = pings.toDF("value")
+
+      val outputPath = opts.outputPath()
+
+      aggregate(pingsDataframe)
+        .repartition(opts.numParquetFiles())
+        .write
+        .mode("overwrite")
+        .partitionBy("submission_date_s3")
+        .parquet(s"${outputPath}/${outputPrefix}")
+    }
+
+    if (shouldStopContextAtEnd(spark)) {
+      spark.stop()
+    }
+  }
+
   private def shouldStopContextAtEnd(spark: SparkSession): Boolean = {
     !spark.conf.get("spark.home").startsWith("/databricks")
   }
@@ -157,10 +157,11 @@ object ExperimentEnrollmentsAggregator extends StreamingJobBase {
       "numParquetFiles",
       descr = "Number of parquet files per submission_date_s3 (batch mode only)",
       required = false,
-      default = Some(defaultNumFiles)
+      default = Some(DefaultNumFiles)
     )
 
     conflicts(kafkaBroker, List(from, to, numParquetFiles))
     verify()
   }
+
 }

@@ -5,6 +5,8 @@ package com.mozilla.telemetry.streaming
 
 import com.mozilla.telemetry.heka.{Dataset, Message}
 import com.mozilla.telemetry.pings.{CorePing, CrashPing, MainPing, Ping}
+import com.mozilla.telemetry.streaming.ErrorAggregatorBase.Opts
+import com.mozilla.telemetry.streaming.StreamingJobBase.{BaseOpts, DefaultNumFiles, TelemetryKafkaTopic}
 import com.mozilla.telemetry.timeseries.{RowBuilder, SchemaBuilder}
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.functions.{col, sum, window}
@@ -15,38 +17,12 @@ import org.rogach.scallop.ScallopOption
 
 abstract class ErrorAggregatorBase extends StreamingJobBase {
 
-  val kafkaTopic = "telemetry"
-  val defaultNumFiles = 60
-
   //TODO: make relationships visible here - we're adding crash/Fennec and core/Fennec/Android
   private val allowedDocTypes = List("main", "crash", "core")
   private val allowedAppNames = List("Firefox", "Fennec")
   private val coreFennecPingAllowedOses = List("Android")
   private val disallowedChannels = List("Other")
   private val kafkaCacheMaxCapacity = 1000
-
-  private class Opts(args: Array[String]) extends BaseOpts(args) {
-    val outputPath: ScallopOption[String] = opt[String](
-      "outputPath",
-      descr = "Output path",
-      required = false,
-      default = Some("/tmp/parquet"))
-    val raiseOnError: ScallopOption[Boolean] = opt[Boolean](
-      "raiseOnError",
-      descr = "Whether the program should exit on a data processing error or not.")
-    val failOnDataLoss: ScallopOption[Boolean] = opt[Boolean](
-      "failOnDataLoss",
-      descr = "Whether to fail the query when it’s possible that data is lost.")
-    val numParquetFiles: ScallopOption[Int] = opt[Int](
-      "numParquetFiles",
-      descr = "Number of parquet files to write per submission_date_s3 (batch mode only)",
-      required = false,
-      default = Some(defaultNumFiles)
-    )
-
-    conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
-    verify()
-  }
 
   val countHistogramErrorsSchema: StructType
   val dimensionsSchema: StructType
@@ -224,7 +200,7 @@ abstract class ErrorAggregatorBase extends StreamingJobBase {
       .option("failOnDataLoss", opts.failOnDataLoss())
       .option("kafka.max.partition.fetch.bytes", 8 * 1024 * 1024) // 8MB
       .option("spark.streaming.kafka.consumer.cache.maxCapacity", kafkaCacheMaxCapacity)
-      .option("subscribe", kafkaTopic)
+      .option("subscribe", TelemetryKafkaTopic)
       .option("startingOffsets", opts.startingOffsets())
       .load()
 
@@ -293,4 +269,31 @@ abstract class ErrorAggregatorBase extends StreamingJobBase {
   }
 
   def main(args: Array[String]): Unit = run(args)
+}
+
+object ErrorAggregatorBase {
+
+  private class Opts(args: Array[String]) extends BaseOpts(args) {
+    val outputPath: ScallopOption[String] = opt[String](
+      "outputPath",
+      descr = "Output path",
+      required = false,
+      default = Some("/tmp/parquet"))
+    val raiseOnError: ScallopOption[Boolean] = opt[Boolean](
+      "raiseOnError",
+      descr = "Whether the program should exit on a data processing error or not.")
+    val failOnDataLoss: ScallopOption[Boolean] = opt[Boolean](
+      "failOnDataLoss",
+      descr = "Whether to fail the query when it’s possible that data is lost.")
+    val numParquetFiles: ScallopOption[Int] = opt[Int](
+      "numParquetFiles",
+      descr = "Number of parquet files to write per submission_date_s3 (batch mode only)",
+      required = false,
+      default = Some(DefaultNumFiles)
+    )
+
+    conflicts(kafkaBroker, List(from, to, fileLimit, numParquetFiles))
+    verify()
+  }
+
 }

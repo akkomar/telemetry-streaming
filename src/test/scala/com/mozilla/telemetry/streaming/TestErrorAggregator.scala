@@ -7,6 +7,7 @@ import java.io.File
 import java.sql.Timestamp
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import com.mozilla.telemetry.streaming.StreamingJobBase.TelemetryKafkaTopic
 import com.mozilla.telemetry.streaming.TestUtils.Fennec
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.streaming.StreamingQueryListener
@@ -270,8 +271,8 @@ class TestErrorAggregator extends FlatSpec with Matchers with DataFrameSuiteBase
   it should "correctly read from kafka" taggedAs(Kafka.DockerComposeTag, DockerErrorAggregatorTag) in {
     spark.sparkContext.setLogLevel("WARN")
 
-    Kafka.createTopic(ErrorAggregator.kafkaTopic)
-    val kafkaProducer = Kafka.makeProducer(ErrorAggregator.kafkaTopic)
+    Kafka.createTopic(TelemetryKafkaTopic)
+    val kafkaProducer = Kafka.makeProducer(TelemetryKafkaTopic)
 
     def send(rs: Seq[Array[Byte]]): Unit = {
       rs.foreach{ kafkaProducer.send(_, synchronous = true) }

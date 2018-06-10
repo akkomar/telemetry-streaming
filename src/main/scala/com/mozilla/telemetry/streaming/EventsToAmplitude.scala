@@ -6,6 +6,7 @@ package com.mozilla.telemetry.streaming
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import com.mozilla.telemetry.heka.Message
 import com.mozilla.telemetry.pings._
+import com.mozilla.telemetry.streaming.StreamingJobBase.{BaseOpts, TelemetryKafkaTopic}
 import com.mozilla.telemetry.streaming.sinks.HttpSink
 import org.apache.spark.sql.types.{BinaryType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -56,7 +57,6 @@ object EventsToAmplitude extends StreamingJobBase {
   val allowedDocTypes = List("focus-event")
   val allowedAppNames = List("Focus")
   val kafkaCacheMaxCapacity = 1000
-  val kafkaTopic = "telemetry"
   override val queryName = "EventsToAmplitude"
   val writeMode = "error"
 
@@ -179,7 +179,7 @@ object EventsToAmplitude extends StreamingJobBase {
       .option("failOnDataLoss", opts.failOnDataLoss())
       .option("kafka.max.partition.fetch.bytes", 8 * 1024 * 1024) // 8MB
       .option("spark.streaming.kafka.consumer.cache.maxCapacity", kafkaCacheMaxCapacity)
-      .option("subscribe", kafkaTopic)
+      .option("subscribe", TelemetryKafkaTopic)
       .option("startingOffsets", opts.startingOffsets())
       .load()
 
