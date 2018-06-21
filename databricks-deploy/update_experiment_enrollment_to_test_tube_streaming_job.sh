@@ -36,9 +36,9 @@ cat << EOF
     },
     "libraries": [{"jar": "s3://net-mozaws-data-us-west-2-ops-ci-artifacts/mozilla/telemetry-streaming/enrollments_to_testtube/telemetry-streaming.jar"}],
     "email_notifications": {
-        "on_start": ["akomarzewski@mozilla.com"],
-        "on_success": ["akomarzewski@mozilla.com"],
-        "on_failure": ["akomarzewski@mozilla.com"]
+        "on_start": ["akomarzewski@mozilla.com", "dthorn@mozilla.com"],
+        "on_success": ["akomarzewski@mozilla.com", "dthorn@mozilla.com"],
+        "on_failure": ["akomarzewski@mozilla.com", "dthorn@mozilla.com"]
     },
     "spark_jar_task": {
         "main_class_name": "com.mozilla.telemetry.streaming.ExperimentEnrollmentsToTestTube",
