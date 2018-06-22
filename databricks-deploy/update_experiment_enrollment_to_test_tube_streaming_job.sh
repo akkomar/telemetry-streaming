@@ -10,7 +10,7 @@ cat << EOF
     "name": "Experiment enrollment aggregates to TestTube- streaming",
     "new_cluster": {
         "spark_version": "4.1.x-scala2.11",
-        "node_type_id": "c3.4xlarge",
+        "node_type_id": "c3.2xlarge",
         "aws_attributes": {
             "first_on_demand": "1",
             "availability": "SPOT_WITH_FALLBACK",
