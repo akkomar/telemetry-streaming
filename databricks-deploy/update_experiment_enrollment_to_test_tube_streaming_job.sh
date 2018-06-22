@@ -42,7 +42,7 @@ cat << EOF
     },
     "spark_jar_task": {
         "main_class_name": "com.mozilla.telemetry.streaming.ExperimentEnrollmentsToTestTube",
-        "parameters": ["--kafkaBroker","${KAFKA_BROKER}", "--url","https://firefox-test-tube.herokuapp.com/v2/uptake/"]
+        "parameters": ["--kafkaBroker","${KAFKA_BROKER}", "--url","https://firefox-test-tube.herokuapp.com/v2/enrollment/"]
     }
 }
 EOF
