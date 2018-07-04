@@ -7,7 +7,7 @@ source "$(dirname "$0")"/set_env.sh
 create_job_json() {
 cat << EOF
 {
-    "name": "Experiment enrollment aggregates to TestTube- streaming",
+    "name": "Experiment enrollment aggregates to TestTube - streaming",
     "new_cluster": {
         "spark_version": "4.1.x-scala2.11",
         "node_type_id": "c3.2xlarge",
@@ -42,7 +42,11 @@ cat << EOF
     },
     "spark_jar_task": {
         "main_class_name": "com.mozilla.telemetry.streaming.ExperimentEnrollmentsToTestTube",
-        "parameters": ["--kafkaBroker","${KAFKA_BROKER}", "--url","https://firefox-test-tube.herokuapp.com/v2/enrollment/"]
+        "parameters": [
+            "--kafkaBroker","${KAFKA_BROKER}",
+            "--checkpointPath","s3://mozilla-databricks-telemetry-test/experiment_enrollment_aggregates_to_testtube_checkpoint",
+            "--url","https://firefox-test-tube.herokuapp.com/v2/enrollment/"
+        ]
     }
 }
 EOF
