@@ -53,8 +53,7 @@ cat << EOF
             "--windowOffsetMinutes","26",
             "--checkpointPath","s3://mozilla-databricks-telemetry-test/federated_learning_spark_checkpoint_test",
             "--modelOutputPath","s3://net-mozaws-prod-us-west-2-data-public/awesomebar_study_test",
-            "--stateCheckpointPath","s3://mozilla-databricks-telemetry-test/federated_learning_model_optimizer_checkpoint_test",
-            "--stateBootstrapFilePath","s3://mozilla-databricks-telemetry-test/federated_learning/bootstrap.json"
+            "--stateCheckpointPath","s3://mozilla-databricks-telemetry-test/federated_learning_model_optimizer_checkpoint_test"
         ]
     }
 }
