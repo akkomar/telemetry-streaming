@@ -13,7 +13,7 @@ cat << EOF
     "name": "Experiment enrollment aggregates - streaming",
     "new_cluster": {
         "spark_version": "4.1.x-scala2.11",
-        "node_type_id": "c3.4xlarge",
+        "node_type_id": "c3.2xlarge",
         "aws_attributes": {
             "first_on_demand": "1",
             "availability": "SPOT_WITH_FALLBACK",
@@ -22,7 +22,7 @@ cat << EOF
         },
         "autoscale": {
             "min_workers": 1,
-            "max_workers": 20
+            "max_workers": 10
         },
         "ssh_public_keys": ["${SSH_PUBLIC_KEY}"],
         "spark_conf": {
@@ -37,7 +37,7 @@ cat << EOF
             "TelemetryJobName": "experiment_enrollments"
         }
     },
-    "libraries": [{"jar": "s3://net-mozaws-data-us-west-2-ops-ci-artifacts/mozilla/telemetry-streaming/tags/v1.0.3/telemetry-streaming.jar"}],
+    "libraries": [{"jar": "s3://net-mozaws-data-us-west-2-ops-ci-artifacts/mozilla/telemetry-streaming/tags/v1.0.4/telemetry-streaming.jar"}],
     "email_notifications": {
         "on_start": ["akomarzewski@mozilla.com", "dthorn@mozilla.com"],
         "on_success": ["akomarzewski@mozilla.com", "dthorn@mozilla.com"],
