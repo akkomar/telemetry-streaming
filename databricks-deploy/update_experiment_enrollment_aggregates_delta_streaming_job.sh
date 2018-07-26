@@ -3,14 +3,14 @@ set -eux pipefail
 
 source "$(dirname "$0")"/set_env.sh
 
-OUTPUT_PATH=s3://mozilla-databricks-telemetry-test/enrollment_aggregates_delta
-CHECKPOINT_PATH=s3://mozilla-databricks-telemetry-test/enrollment_aggregates_delta_checkpoint
+OUTPUT_PATH=/delta/enrollment_aggregates_delta
+CHECKPOINT_PATH=/delta/enrollment_aggregates_delta/_checkpoints/streaming
 
 
 create_job_json() {
 cat << EOF
 {
-    "name": "Experiment enrollment aggregates - streaming",
+    "name": "Experiment enrollment aggregates (delta) - streaming",
     "new_cluster": {
         "spark_version": "4.1.x-scala2.11",
         "node_type_id": "c3.2xlarge",
@@ -46,7 +46,11 @@ cat << EOF
     },
     "spark_jar_task": {
         "main_class_name": "com.mozilla.telemetry.streaming.ExperimentEnrollmentsAggregator",
-        "parameters": ["--kafkaBroker","${KAFKA_BROKER}", "--outputPath","${OUTPUT_PATH}", "--checkpointPath","${CHECKPOINT_PATH}"]
+        "parameters": [
+            "--kafkaBroker","${KAFKA_BROKER}",
+            "--outputPath","${OUTPUT_PATH}",
+            "--checkpointPath","${CHECKPOINT_PATH}"
+        ]
     }
 }
 EOF
