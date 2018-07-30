@@ -6,7 +6,7 @@ package com.mozilla.telemetry.streaming
 import com.mozilla.telemetry.heka.{Message, Dataset => MozDataset}
 import com.mozilla.telemetry.pings.EventPing
 import com.mozilla.telemetry.streaming.StreamingJobBase.TelemetryKafkaTopic
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession, functions => f}
 import org.rogach.scallop.ScallopOption
 
 object EventPingEvents extends StreamingJobBase {
@@ -39,7 +39,10 @@ object EventPingEvents extends StreamingJobBase {
     val spark = SparkSession.builder()
       .appName("Event Ping Events")
       .config("spark.streaming.stopGracefullyOnShutdown", "true")
+      .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
       .getOrCreate()
+
+    require(spark.version >= "2.3", "Spark 2.3 is required due to dynamic partition overwrite mode")
 
     opts.kafkaBroker.get match {
       case Some(_) => writeStreamingEvents(spark, opts)
@@ -89,12 +92,15 @@ object EventPingEvents extends StreamingJobBase {
 
       val pingsDataframe = pings.toDF("value")
 
-      val outputPath = s"${opts.outputPath()}/${outputPrefix}/submission_date_s3=$currentDate/doc_type=event"
+      val outputPath = s"${opts.outputPath()}/${outputPrefix}"
 
       explodeEvents(pingsDataframe)
+        .withColumn("submission_date_s3", f.lit(currentDate))
+        .withColumn("doc_type", f.lit("event"))
         .write
         .option("maxRecordsPerFile", opts.maxRecordsPerFile())
         .mode("overwrite")
+        .partitionBy("submission_date_s3", "doc_type")
         .parquet(outputPath)
     }
 
